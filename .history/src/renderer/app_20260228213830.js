@@ -1312,9 +1312,6 @@
             }
           : null;
 
-      const m = document.getElementById('main');
-      const prevScrollTop = m ? m.scrollTop : 0;
-
       ensureSelectedProgram();
       ensureEditorProgram();
       ensureStatsProgram();
@@ -1323,6 +1320,7 @@
         devTools.innerHTML = devEffectsH();
       }
       document.getElementById('nav').innerHTML = navItemsH();
+      const m = document.getElementById('main');
       if (view === 'home') m.innerHTML = homeH();
       else if (view === 'study') m.innerHTML = studyH();
       else if (view === 'setup') m.innerHTML = setupH();
@@ -1336,12 +1334,9 @@
       if (mdl) extraUI += mdl;
       {
         const showShortcutsHere = view === 'quiz' ? showShortcutsPanelInQuiz : showShortcutsPanel;
-        if (showShortcutsHere && !mdl) extraUI += shortcutsHintH();
+      if (showShortcutsHere && !mdl) extraUI += shortcutsHintH();
       }
       document.getElementById('mroot').innerHTML = extraUI;
-      document.getElementById('mroot').setAttribute('aria-hidden', extraUI ? 'false' : 'true');
-
-      if (m) m.scrollTop = prevScrollTop;
 
       if (activeSearch) {
         const input = document.querySelector(`[data-action="${activeSearch.action}"]`);

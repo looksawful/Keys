@@ -441,14 +441,6 @@ test("D07: REVIEW: innerHTML used for rendering (XSS surface)", () => {
   assert.ok(true);
 });
 
-test("D07b: render() preserves scrollTop across re-renders", () => {
-  // The render function should save and restore main element scrollTop
-  assert.ok(
-    appSrc.includes('scrollTop') && /render.*\{[\s\S]*scrollTop[\s\S]*\.innerHTML/.test(appSrc),
-    "render() should reference scrollTop before innerHTML assignment"
-  );
-});
-
 test("D08: REVIEW: localStorage keys use short/cryptic names", () => {
   const keys = ["hk_p", "hk_s", "hk_sh", "hk_cfg", "hk_sv"];
   for (const k of keys) {

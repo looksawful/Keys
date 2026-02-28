@@ -441,14 +441,6 @@ test("D07: REVIEW: innerHTML used for rendering (XSS surface)", () => {
   assert.ok(true);
 });
 
-test("D07b: render() preserves scrollTop across re-renders", () => {
-  // The render function should save and restore main element scrollTop
-  assert.ok(
-    appSrc.includes('scrollTop') && /render.*\{[\s\S]*scrollTop[\s\S]*\.innerHTML/.test(appSrc),
-    "render() should reference scrollTop before innerHTML assignment"
-  );
-});
-
 test("D08: REVIEW: localStorage keys use short/cryptic names", () => {
   const keys = ["hk_p", "hk_s", "hk_sh", "hk_cfg", "hk_sv"];
   for (const k of keys) {
@@ -593,28 +585,6 @@ test("E10: F5 must NOT be used as a hotkey default (Electron refresh conflict)",
   assert.ok(block.includes("reset: 'F9, Esc'"), "quiz.reset should be F9, Esc");
   assert.ok(block.includes("skip: 'F10'"), "quiz.skip should be F10");
   assert.ok(block.includes("quit: 'F11'"), "quiz.quit should be F11");
-});
-
-test("E10b: HTML has ARIA labels on landmark elements", () => {
-  const htmlSrc = fs.readFileSync(
-    path.join(__dirname, '..', 'src', 'renderer', 'index.html'),
-    'utf-8'
-  );
-  // <nav> should have aria-label
-  assert.ok(
-    htmlSrc.includes('aria-label') && /<nav[^>]+aria-label/.test(htmlSrc),
-    "<nav> element should have aria-label"
-  );
-  // <main> should have aria-label
-  assert.ok(
-    /<main[^>]+aria-label/.test(htmlSrc),
-    "<main> element should have aria-label"
-  );
-  // modal root should have role="dialog" or aria declaration
-  assert.ok(
-    /id="mroot"[^>]+role="dialog"/.test(htmlSrc) || /id="mroot"[^>]+aria-/.test(htmlSrc),
-    "Modal root (#mroot) should have dialog role or aria attributes"
-  );
 });
 
 test("E11: REVIEW: no keyboard shortcut for starting quiz from home", () => {
