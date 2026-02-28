@@ -1,0 +1,45 @@
+{
+  "name": "keys",
+  "productName": "keys",
+  "version": "1.0.0",
+  "description": "Desktop trainer for hotkeys with study, tests, stats, and editor.",
+  "main": "main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron .",
+    "test": "node --test",
+    "build": "electron-builder",
+    "pack": "electron-builder --dir"
+  },
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "electron": "^30.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.awfulapps.keys",
+    "productName": "keys",
+    "asar": true,
+    "files": [
+      "main.cjs",
+      "preload.cjs",
+      "build/icon.png",
+      "THIRD_PARTY_NOTICES.txt",
+      "src/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "buildResources": "build",
+      "output": "dist"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}
+

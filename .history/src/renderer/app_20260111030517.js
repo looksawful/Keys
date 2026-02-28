@@ -1,0 +1,511 @@
+(function() {
+  const { defaultPrograms, colorOptions } = window.hkData;
+  const {
+    normalizeKey,
+    parseKeyCombo,
+    compareKeySets,
+    createQuizState,
+    calcProgramProgress,
+    calcAverageScore
+  } = window.hkLogic;
+
+  const STORAGE_KEYS = {
+    programs: 'hk_p',
+    stats: 'hk_s'
+  };
+
+  function clonePrograms() {
+    return JSON.parse(JSON.stringify(defaultPrograms));
+  }
+
+  function loadPrograms() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.programs);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object' && Object.keys(parsed).length) {
+          return parsed;
+        }
+      }
+    } catch (err) {
+      // Ignore invalid storage entries.
+    }
+    return clonePrograms();
+  }
+
+  function loadStats() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.stats);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        return {
+          h: Array.isArray(parsed.h) ? parsed.h : [],
+          t: Number.isFinite(parsed.t) ? parsed.t : 0,
+          c: Number.isFinite(parsed.c) ? parsed.c : 0
+        };
+      }
+    } catch (err) {
+      // Ignore invalid storage entries.
+    }
+    return { h: [], t: 0, c: 0 };
+  }
+
+  let view = 'home';
+  let progs = loadPrograms();
+  let st = loadStats();
+  let sel = Object.keys(progs)[0] || null;
+  let qcfg = { d: 'all', n: 10 };
+  let qz = null;
+  let res = null;
+  let sfil = 'all';
+  let eprog = Object.keys(progs)[0] || null;
+  let mdl = null;
+
+  function ensureSelectedProgram() {
+    if (!sel || !progs[sel]) {
+      sel = Object.keys(progs)[0] || null;
+    }
+  }
+
+  function ensureEditorProgram() {
+    if (!eprog || !progs[eprog]) {
+      eprog = Object.keys(progs)[0] || null;
+    }
+  }
+
+  function saveState() {
+    localStorage.setItem(STORAGE_KEYS.programs, JSON.stringify(progs));
+    localStorage.setItem(STORAGE_KEYS.stats, JSON.stringify(st));
+  }
+
+  function go(v, p) {
+    view = v;
+    if (p) sel = p;
+    render();
+  }
+
+  function prog(id) {
+    return calcProgramProgress(st.h, id);
+  }
+
+  function render() {
+    ensureSelectedProgram();
+    ensureEditorProgram();
+    document.getElementById('nav').innerHTML = `
+      <button class="nav-b${view === 'home' ? ' on' : ''}" data-action="go" data-view="home">🏠 Главная</button>
+      <button class="nav-b${view === 'editor' ? ' on' : ''}" data-action="go" data-view="editor">✏️ Редактор</button>
+      <button class="nav-b${view === 'stats' ? ' on' : ''}" data-action="go" data-view="stats">📊 Статистика</button>`;
+    const m = document.getElementById('main');
+    if (view === 'home') m.innerHTML = homeH();
+    else if (view === 'study') m.innerHTML = studyH();
+    else if (view === 'setup') m.innerHTML = setupH();
+    else if (view === 'quiz') m.innerHTML = quizH();
+    else if (view === 'results') m.innerHTML = resultsH();
+    else if (view === 'editor') m.innerHTML = editorH();
+    else if (view === 'stats') m.innerHTML = statsH();
+    document.getElementById('mroot').innerHTML = mdl || '';
+  }
+
+  function homeH() {
+    return `<div style="text-align:center;margin-bottom:2rem"><h1 style="font-size:2.5rem;font-weight:700;margin-bottom:.5rem">Изучай горячие клавиши</h1><p style="color:var(--text2)">Выбери программу</p></div>
+    <div class="grid">${Object.entries(progs).map(([id, p]) => {
+      const pr = prog(id);
+      return `<div class="card pcard" data-action="open-study" data-program="${id}">
+        <div class="phdr"><div class="picon" style="background:${p.color}">${p.name[0]}</div><div class="pname">${p.name}</div></div>
+        <div class="pstats"><span>📚 ${p.sc.length}</span><span>📈 ${pr}%</span></div>
+        <div class="pbar"><div class="pfill" style="width:${pr}%"></div></div>
+        <div style="margin-top:1rem;display:flex;gap:.5rem">
+          <button class="btn btn2 btns" style="flex:1" data-action="open-study" data-program="${id}">📖 Изучать</button>
+          <button class="btn btn1 btns" style="flex:1" data-action="open-setup" data-program="${id}">🎯 Тест</button>
+        </div></div>`;
+    }).join('')}</div>`;
+  }
+
+  function studyH() {
+    if (!sel || !progs[sel]) return '<div class="empty">Нет программы</div>';
+    const p = progs[sel];
+    const list = p.sc.filter((s) => sfil === 'all' || s.d === sfil);
+    return `<div class="stucon"><div class="stuhdr"><button class="back" data-action="go" data-view="home">← Назад</button><button class="btn btn1" data-action="open-setup">🎯 Тест</button></div>
+    <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem"><div class="picon" style="background:${p.color};width:56px;height:56px;font-size:1.75rem">${p.name[0]}</div><div><h2 style="font-size:1.75rem">${p.name}</h2><p style="color:var(--text2)">${p.sc.length} клавиш</p></div></div>
+    <div class="fbar">
+      <button class="fbtn${sfil === 'all' ? ' on' : ''}" data-action="set-filter" data-filter="all">Все</button>
+      <button class="fbtn${sfil === 'easy' ? ' on' : ''}" data-action="set-filter" data-filter="easy">🟢 Лёгкие</button>
+      <button class="fbtn${sfil === 'medium' ? ' on' : ''}" data-action="set-filter" data-filter="medium">🟡 Средние</button>
+      <button class="fbtn${sfil === 'hard' ? ' on' : ''}" data-action="set-filter" data-filter="hard">🔴 Сложные</button>
+    </div>
+    <div class="slist">${list.map((s) => `<div class="sitem"><div class="sact">${s.a}</div><div style="display:flex;align-items:center;gap:1rem">
+      <div class="skeys">${s.k.map((k) => `<span class="key">${k}</span>`).join('<span class="ksep">+</span>')}</div>
+      <span class="diff diff-${s.d[0]}">${s.d === 'easy' ? 'Лёгкий' : s.d === 'medium' ? 'Средний' : 'Сложный'}</span></div></div>`).join('')}</div></div>`;
+  }
+
+  function setupH() {
+    if (!sel || !progs[sel]) return '<div class="empty">Нет программы</div>';
+    const p = progs[sel];
+    const max = p.sc.filter((s) => qcfg.d === 'all' || s.d === qcfg.d).length;
+    const baseCounts = [5, 10, 15, 20].filter((c) => c <= max);
+    const counts = baseCounts.length ? baseCounts : (max ? [max] : []);
+    if (!counts.includes(qcfg.n)) {
+      qcfg.n = counts[0] || 0;
+    }
+    return `<div class="setup"><button class="back" data-action="go" data-view="home" style="margin-bottom:1rem">← Назад</button>
+    <h2 class="setitle">Тест: ${p.name}</h2>
+    <div class="sgrp"><label class="slbl">Сложность</label><div class="sopts">
+      <button class="obtn${qcfg.d === 'all' ? ' sel' : ''}" data-action="set-difficulty" data-difficulty="all">Все</button>
+      <button class="obtn${qcfg.d === 'easy' ? ' sel' : ''}" data-action="set-difficulty" data-difficulty="easy">🟢 Лёгкие</button>
+      <button class="obtn${qcfg.d === 'medium' ? ' sel' : ''}" data-action="set-difficulty" data-difficulty="medium">🟡 Средние</button>
+      <button class="obtn${qcfg.d === 'hard' ? ' sel' : ''}" data-action="set-difficulty" data-difficulty="hard">🔴 Сложные</button>
+    </div></div>
+    <div class="sgrp"><label class="slbl">Вопросов (макс: ${max})</label><div class="sopts">
+      ${counts.map((c) => `<button class="obtn${qcfg.n === c ? ' sel' : ''}" data-action="set-count" data-count="${c}">${c}</button>`).join('')}
+    </div></div>
+    <button class="btn btn1" style="width:100%;margin-top:1rem" data-action="start-quiz"${max === 0 ? ' disabled' : ''}>🚀 Начать</button></div>`;
+  }
+
+  function quizH() {
+    if (!qz || !qz.qs.length) return '<div class="empty">Нет вопросов</div>';
+    const q = qz.qs[qz.i];
+    const pct = (qz.i + 1) / qz.qs.length * 100;
+    const kh = qz.k.length ? qz.k.map((k) => `<span class="ikey">${k}</span>`).join('<span class="ksep">+</span>') : '<span style="color:var(--text3)">Нажмите клавиши...</span>';
+    const cls = qz.sh ? (qz.ok ? ' ok' : ' no') : '';
+    return `<div class="qcon"><div class="qprog"><div class="qpbar"><div class="qpfill" style="width:${pct}%"></div></div><span>${qz.i + 1}/${qz.qs.length}</span></div>
+    <div class="qcard"><div class="qp">${progs[sel].name}</div><div class="qq">${q.a}</div>
+    <div class="qin${cls}">${kh}</div>
+    ${qz.sh ? `<div class="qres${qz.ok ? ' ok' : ' no'}">${qz.ok ? '✓ Правильно!' : '✗ Неправильно'}</div>` : ''}
+    ${qz.sh && !qz.ok ? `<div class="qans">Ответ: <strong>${q.k.join(' + ')}</strong></div>` : ''}
+    <div class="qbtns">${qz.sh ? `<button class="btn btn1" data-action="next-question">${qz.i + 1 >= qz.qs.length ? 'Завершить' : 'Далее →'}</button>` :
+      `<button class="btn btn2" data-action="reset-answer">🔄 Сброс</button>
+      <button class="btn btn1" data-action="check-answer"${qz.k.length === 0 ? ' disabled' : ''}>✓ Проверить</button>
+      <button class="btn btn2" data-action="skip-question">Пропустить →</button>`}</div></div></div>`;
+  }
+
+  function resultsH() {
+    if (!res) return '';
+    const pct = Math.round(res.c / res.t * 100);
+    const emoji = pct >= 90 ? '🏆' : pct >= 70 ? '🌟' : pct >= 50 ? '👍' : '💪';
+    const title = pct >= 90 ? 'Отлично!' : pct >= 70 ? 'Хорошо!' : pct >= 50 ? 'Неплохо!' : 'Продолжай!';
+    return `<div class="rcon"><div class="card rcard"><div class="ricon">${emoji}</div><h2 class="rtitle">${title}</h2><div class="rscore">${pct}%</div>
+    <p style="color:var(--text2)">${res.n}</p><div class="rstats">
+      <div class="rst"><div class="rstv g">${res.c}</div><div class="rstl">Правильно</div></div>
+      <div class="rst"><div class="rstv r">${res.t - res.c}</div><div class="rstl">Ошибок</div></div>
+      <div class="rst"><div class="rstv">${res.t}</div><div class="rstl">Всего</div></div>
+    </div><div style="display:flex;gap:1rem;justify-content:center">
+      <button class="btn btn2" data-action="go" data-view="home">🏠 Главная</button>
+      <button class="btn btn1" data-action="restart-quiz">🔄 Ещё раз</button>
+    </div></div></div>`;
+  }
+
+  function editorH() {
+    if (!eprog || !progs[eprog]) return '<div class="empty">Нет программы</div>';
+    const p = progs[eprog];
+    return `<div class="egrid"><div class="eside"><div class="stitle"><span>Программы</span><button class="btn btn1 btns" data-action="show-program-modal">+ Добавить</button></div>
+    <div class="elist">${Object.entries(progs).map(([id, pr]) => `<div class="eitem${eprog === id ? ' on' : ''}" data-action="select-program" data-program="${id}">
+      <span style="color:${pr.color}">${pr.name}</span><span style="color:var(--text3)">${pr.sc.length}</span></div>`).join('')}</div></div>
+    <div class="emain"><div class="stitle"><div style="display:flex;align-items:center;gap:.75rem">
+      <div class="picon" style="background:${p.color};width:40px;height:40px">${p.name[0]}</div><span>${p.name}</span></div>
+      <div style="display:flex;gap:.5rem"><button class="btn btn2 btns" data-action="show-program-modal" data-program="${eprog}">✏️</button><button class="btn btn3 btns" data-action="delete-program">🗑️</button></div></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin:1.5rem 0 1rem">
+      <h3 style="color:var(--text2)">Клавиши (${p.sc.length})</h3><button class="btn btn1 btns" data-action="show-shortcut-modal">+ Добавить</button></div>
+    <div class="sclist">${p.sc.length ? p.sc.map((s) => `<div class="scitem"><div class="scact">${s.a}<br><span class="diff diff-${s.d[0]}">${s.d === 'easy' ? 'Лёгкий' : s.d === 'medium' ? 'Средний' : 'Сложный'}</span></div>
+      <div class="sckeys">${s.k.join(' + ')}</div><div class="scbtns"><button class="ibtn ibtn-e" data-action="show-shortcut-modal" data-shortcut="${s.id}">✏️</button><button class="ibtn ibtn-d" data-action="delete-shortcut" data-shortcut="${s.id}">🗑️</button></div></div>`).join('') : '<div class="empty">Нет клавиш</div>'}</div></div></div>`;
+  }
+
+  function statsH() {
+    const avg = calcAverageScore(st.h);
+    const tot = Object.values(progs).reduce((sum, p) => sum + p.sc.length, 0);
+    return `<h2 style="font-size:1.75rem;margin-bottom:1.5rem">📊 Статистика</h2>
+    <div class="stgrid"><div class="stcard"><div class="stval">${st.t}</div><div class="stlbl">Тестов</div></div>
+    <div class="stcard"><div class="stval">${st.c}</div><div class="stlbl">Правильно</div></div>
+    <div class="stcard"><div class="stval">${avg}%</div><div class="stlbl">Средний %</div></div>
+    <div class="stcard"><div class="stval">${tot}</div><div class="stlbl">Всего клавиш</div></div></div>
+    <div class="card" style="margin-top:2rem"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem">
+      <h3>История</h3>
+      <div style="display:flex;gap:.5rem">
+        <button class="btn btn2 btns" data-action="reset-programs">🔄 Сбросить программы</button>
+        <button class="btn btn3 btns" data-action="reset-stats">🗑️ Очистить статистику</button>
+      </div>
+    </div>
+    ${st.h.length ? `<div class="hlist">${st.h.slice().reverse().slice(0, 20).map((h) => {
+      const pct = Math.round(h.c / h.t * 100);
+      return `<div class="hitem"><div><strong>${h.n}</strong><br><small style="color:var(--text3)">${new Date(h.dt).toLocaleDateString('ru')}</small></div>
+      <div style="color:${pct >= 70 ? 'var(--green)' : 'var(--red)'};font-weight:600">${h.c}/${h.t} (${pct}%)</div></div>`;
+    }).join('')}</div>` : '<div class="empty">Нет истории</div>'}</div>`;
+  }
+
+  function showPM(edit) {
+    const p = edit && progs[edit] ? progs[edit] : null;
+    const editId = p ? edit : '';
+    mdl = `<div class="mbg" data-action="close-modal"><div class="modal" data-action="modal-body">
+    <h2 class="mtitle">${p ? 'Редактировать' : 'Новая программа'}</h2>
+    <div class="fg"><label class="fl">Название</label><input class="fi" id="mn" value="${p ? p.name : ''}"></div>
+    <div class="fg"><label class="fl">Цвет</label><div class="colors">${colorOptions.map((c) => `<div class="copt${p && p.color === c ? ' sel' : ''}" style="background:${c}" data-action="select-color" data-color="${c}"></div>`).join('')}</div></div>
+    <div class="mbtns"><button class="btn btn2" data-action="close-modal">Отмена</button><button class="btn btn1" data-action="save-program" data-program="${editId}">${p ? 'Сохранить' : 'Создать'}</button></div></div></div>`;
+    render();
+  }
+
+  function showSM(edit) {
+    if (!eprog || !progs[eprog]) return;
+    const p = progs[eprog];
+    const s = edit ? p.sc.find((x) => x.id === edit) : null;
+    const editId = s ? s.id : 0;
+    mdl = `<div class="mbg" data-action="close-modal"><div class="modal" data-action="modal-body">
+    <h2 class="mtitle">${s ? 'Редактировать' : 'Новая клавиша'}</h2>
+    <div class="fg"><label class="fl">Действие</label><input class="fi" id="ma" value="${s ? s.a : ''}"></div>
+    <div class="fg"><label class="fl">Клавиши (через +)</label><input class="fi" id="mk" value="${s ? s.k.join(' + ') : ''}"></div>
+    <div class="fg"><label class="fl">Сложность</label><select class="fsel" id="md">
+      <option value="easy"${s && s.d === 'easy' ? ' selected' : ''}>Лёгкий</option>
+      <option value="medium"${s && s.d === 'medium' ? ' selected' : ''}>Средний</option>
+      <option value="hard"${s && s.d === 'hard' ? ' selected' : ''}>Сложный</option></select></div>
+    <div class="mbtns"><button class="btn btn2" data-action="close-modal">Отмена</button><button class="btn btn1" data-action="save-shortcut" data-shortcut="${editId}">${s ? 'Сохранить' : 'Добавить'}</button></div></div></div>`;
+    render();
+  }
+
+  function startQ() {
+    ensureSelectedProgram();
+    if (!sel || !progs[sel]) return;
+    const p = progs[sel];
+    qz = createQuizState(p.sc, { difficulty: qcfg.d, count: qcfg.n });
+    res = null;
+    go('quiz');
+  }
+
+  function handleKeydown(e) {
+    if (mdl && view !== 'quiz' && e.key === 'Escape') {
+      mdl = null;
+      render();
+      return;
+    }
+    if (view !== 'quiz' || !qz || qz.sh) return;
+    if (e.repeat) return;
+    e.preventDefault();
+    const key = normalizeKey(e.key);
+    if (!qz.k.includes(key)) {
+      qz.k.push(key);
+      render();
+    }
+  }
+
+  function checkQ() {
+    if (!qz || !qz.qs.length) return;
+    const q = qz.qs[qz.i];
+    qz.ok = compareKeySets(qz.k, q.k);
+    qz.sh = true;
+    if (qz.ok) qz.c += 1;
+    render();
+  }
+
+  function skipQ() {
+    nextQ();
+  }
+
+  function nextQ() {
+    if (!qz || !qz.qs.length) {
+      go('home');
+      return;
+    }
+    if (qz.i + 1 >= qz.qs.length) {
+      res = { p: sel, n: progs[sel].name, c: qz.c, t: qz.qs.length, dt: new Date().toISOString() };
+      if (res.t) {
+        st.h.push(res);
+        st.t += 1;
+        st.c += res.c;
+        saveState();
+      }
+      go('results');
+    } else {
+      qz.i += 1;
+      qz.k = [];
+      qz.sh = false;
+      qz.ok = false;
+      render();
+    }
+  }
+
+  function saveP(edit) {
+    const name = document.getElementById('mn')?.value.trim();
+    const color = document.querySelector('.copt.sel')?.dataset.color || colorOptions[0];
+    if (!name) return;
+    if (edit && progs[edit]) {
+      progs[edit].name = name;
+      progs[edit].color = color;
+    } else {
+      let id = name.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '') || `p${Date.now()}`;
+      if (progs[id]) {
+        id = `${id}_${Date.now()}`;
+      }
+      progs[id] = { name, color, sc: [] };
+      eprog = id;
+      sel = id;
+    }
+    mdl = null;
+    saveState();
+    render();
+  }
+
+  function delP() {
+    if (Object.keys(progs).length <= 1) {
+      alert('Нельзя удалить последнюю');
+      return;
+    }
+    if (confirm('Удалить?')) {
+      const removed = eprog;
+      delete progs[eprog];
+      eprog = Object.keys(progs)[0] || null;
+      if (sel === removed) {
+        sel = eprog;
+      }
+      saveState();
+      render();
+    }
+  }
+
+  function saveS(edit) {
+    const a = document.getElementById('ma')?.value.trim();
+    const ks = document.getElementById('mk')?.value.trim();
+    const d = document.getElementById('md')?.value;
+    if (!a || !ks) return;
+    const k = parseKeyCombo(ks);
+    if (!k.length) return;
+    const p = progs[eprog];
+    if (!p) return;
+    if (edit) {
+      const s = p.sc.find((x) => x.id === edit);
+      if (s) {
+        s.a = a;
+        s.k = k;
+        s.d = d;
+      }
+    } else {
+      const mx = p.sc.reduce((m, s) => Math.max(m, s.id), 0);
+      p.sc.push({ id: mx + 1, a, k, d });
+    }
+    mdl = null;
+    saveState();
+    render();
+  }
+
+  function delS(id) {
+    if (!eprog || !progs[eprog]) return;
+    if (confirm('Удалить?')) {
+      progs[eprog].sc = progs[eprog].sc.filter((s) => s.id !== id);
+      saveState();
+      render();
+    }
+  }
+
+  function handleClick(event) {
+    const actionEl = event.target.closest('[data-action]');
+    if (!actionEl) return;
+    const action = actionEl.dataset.action;
+
+    if (action === 'modal-body') {
+      event.stopPropagation();
+      return;
+    }
+
+    if (action === 'close-modal') {
+      mdl = null;
+      render();
+      return;
+    }
+
+    if (action === 'select-color') {
+      document.querySelectorAll('.copt').forEach((el) => el.classList.remove('sel'));
+      actionEl.classList.add('sel');
+      return;
+    }
+
+    switch (action) {
+      case 'go':
+        go(actionEl.dataset.view);
+        break;
+      case 'open-study':
+        if (actionEl.dataset.program) sel = actionEl.dataset.program;
+        go('study');
+        break;
+      case 'open-setup':
+        if (actionEl.dataset.program) sel = actionEl.dataset.program;
+        go('setup');
+        break;
+      case 'set-filter':
+        sfil = actionEl.dataset.filter || 'all';
+        render();
+        break;
+      case 'set-difficulty':
+        qcfg.d = actionEl.dataset.difficulty || 'all';
+        render();
+        break;
+      case 'set-count':
+        qcfg.n = Number(actionEl.dataset.count) || qcfg.n;
+        render();
+        break;
+      case 'start-quiz':
+        startQ();
+        break;
+      case 'reset-answer':
+        if (qz) {
+          qz.k = [];
+          render();
+        }
+        break;
+      case 'check-answer':
+        checkQ();
+        break;
+      case 'skip-question':
+        skipQ();
+        break;
+      case 'next-question':
+        nextQ();
+        break;
+      case 'restart-quiz':
+        startQ();
+        break;
+      case 'show-program-modal':
+        showPM(actionEl.dataset.program || null);
+        break;
+      case 'select-program':
+        if (actionEl.dataset.program) {
+          eprog = actionEl.dataset.program;
+          render();
+        }
+        break;
+      case 'delete-program':
+        delP();
+        break;
+      case 'show-shortcut-modal':
+        showSM(actionEl.dataset.shortcut ? Number(actionEl.dataset.shortcut) : null);
+        break;
+      case 'delete-shortcut':
+        delS(Number(actionEl.dataset.shortcut));
+        break;
+      case 'save-program':
+        saveP(actionEl.dataset.program || '');
+        break;
+      case 'save-shortcut':
+        saveS(Number(actionEl.dataset.shortcut || 0));
+        break;
+      case 'reset-stats':
+        if (confirm('Очистить всю статистику и историю?')) {
+          st = { h: [], t: 0, c: 0 };
+          saveState();
+          render();
+        }
+        break;
+      case 'reset-programs':
+        if (confirm('Сбросить все программы к значениям по умолчанию?')) {
+          progs = clonePrograms();
+          eprog = Object.keys(progs)[0] || null;
+          sel = eprog;
+          saveState();
+          render();
+        }
+        break;
+      default:
+        break;
+    }
+  }
+
+  document.addEventListener('click', handleClick);
+  document.addEventListener('keydown', handleKeydown);
+
+  render();
+})();

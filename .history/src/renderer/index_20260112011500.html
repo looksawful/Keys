@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="arctic-light" data-palette="arctic-white" data-tint="soft">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>keys</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=PT+Sans:wght@400;600;700&family=PT+Mono&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="app-header">
+        <div class="app-header-inner">
+          <div class="app-logo">
+            <div class="app-logo-icon">HK</div>
+            <span class="app-logo-text">keys</span>
+          </div>
+          <nav class="app-nav" id="nav"></nav>
+        </div>
+      </header>
+      <main class="app-main" id="main"></main>
+      <div id="mroot"></div>
+    </div>
+    <script>
+      window.addEventListener('error', function(e) {
+        console.error('Global error:', e.message, e.filename, e.lineno, e.colno);
+        alert('JS Error: ' + e.message + ' at ' + e.filename + ':' + e.lineno);
+      });
+      window.addEventListener('unhandledrejection', function(e) {
+        console.error('Unhandled promise rejection:', e.reason);
+        alert('Promise Error: ' + e.reason);
+      });
+    </script>
+    <script src="./data.js"></script>
+    <script src="./logic.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
+
