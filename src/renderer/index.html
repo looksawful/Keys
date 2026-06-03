@@ -1,19 +1,12 @@
 <!DOCTYPE html>
-<html lang="ru" data-theme="arctic-light" data-palette="arctic-white" data-tint="soft">
+<html lang="ru">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>keys</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <canvas id="appBackgroundCanvas" class="app-background" aria-hidden="true"></canvas>
     <div id="app">
       <header class="app-header">
         <div class="app-header-inner">
@@ -21,12 +14,10 @@
             <div class="app-brand-title">keys</div>
             <div class="app-brand-subtitle">Горячие клавиши</div>
           </div>
-          <div class="app-dev-tools" id="devTools"></div>
           <nav class="app-nav" id="nav" aria-label="Основная навигация"></nav>
         </div>
       </header>
       <main class="app-main" id="main" aria-label="Содержимое"></main>
-      <div id="mroot" role="dialog" aria-modal="true" aria-hidden="true"></div>
     </div>
     <script>
       window.__hkFatal = function (title, details) {
@@ -73,10 +64,6 @@
     </script>
     <script src="./data.js"></script>
     <script src="./logic.js"></script>
-    <script src="./program-import.js"></script>
-    <script src="./program-import-session.js"></script>
-    <script src="./background-effects.js"></script>
     <script src="./app.js"></script>
   </body>
 </html>
-
