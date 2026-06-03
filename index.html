@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>keys</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="app-header">
+        <div class="app-header-inner">
+          <div class="app-brand">
+            <div class="app-brand-title">keys</div>
+            <div class="app-brand-subtitle">Горячие клавиши</div>
+          </div>
+          <nav class="app-nav" id="nav" aria-label="Основная навигация"></nav>
+        </div>
+      </header>
+      <main class="app-main" id="main" aria-label="Содержимое"></main>
+    </div>
+    <script>
+      window.__hkFatal = function (title, details) {
+        try {
+          const escapeHtml = (value) =>
+            String(value).replace(/[&<>"']/g, (ch) => {
+              switch (ch) {
+                case '&':
+                  return '&amp;';
+                case '<':
+                  return '&lt;';
+                case '>':
+                  return '&gt;';
+                case '"':
+                  return '&quot;';
+                case "'":
+                  return '&#39;';
+                default:
+                  return ch;
+              }
+            });
+          const msg = (details && String(details)) || '';
+          document.body.innerHTML = `
+            <div class="fatal-screen">
+              <h1 class="fatal-title">${escapeHtml(title)}</h1>
+              <p class="fatal-text">
+                Приложение не смогло запуститься. Обычно это связано с битым localStorage или ошибкой JS.
+              </p>
+              <pre class="fatal-details">${escapeHtml(msg)}</pre>
+              <button id="hkReset" class="fatal-action">Сбросить данные и перезапустить</button>
+            </div>`;
+          document.getElementById('hkReset')?.addEventListener('click', () => {
+            try {
+              localStorage.removeItem('hk_p');
+              localStorage.removeItem('hk_s');
+              localStorage.removeItem('hk_sh');
+              localStorage.removeItem('hk_cfg');
+              localStorage.removeItem('hk_sv');
+            } catch {}
+            location.reload();
+          });
+        } catch {}
+      };
+    </script>
+    <script src="./data.js"></script>
+    <script src="./logic.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
