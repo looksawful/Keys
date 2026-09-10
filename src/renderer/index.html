@@ -51,6 +51,7 @@
             </div>`;
           document.getElementById('hkReset')?.addEventListener('click', () => {
             try {
+              localStorage.removeItem('hk_browser_cfg');
               localStorage.removeItem('hk_p');
               localStorage.removeItem('hk_s');
               localStorage.removeItem('hk_sh');
