@@ -10,7 +10,7 @@ KEYS is a dependency-free browser trainer for learning keyboard shortcuts. The c
 - `src/renderer/index.html` / `styles.css` — static shell and presentation.
 - `scripts/browser-build.cjs` — deterministic copy build into `dist/browser`.
 - `scripts/browser-server.cjs` — local development server bound to loopback by default.
-- `docs/shortcut-sources.md` — first-party source map and shortcut-data audit status.
+- `docs/` — deployment, verification, browser-smoke, cleanup, and shortcut-provenance contracts.
 
 The browser version currently persists quiz configuration only. Learning history, editor functionality, persistent progress, and recommendations from older revisions are not part of the active runtime.
 
@@ -27,10 +27,17 @@ npm start
 
 ## Repository topology
 
-`codex/browser-github-pages` is the source/default branch. `gh-pages` is a deployment-artifact branch with separate history. Do not hand-edit or mechanically merge `gh-pages`; update source, verify it, then deploy deliberately. The 2026-09-10 cleanup established byte-for-byte parity for the five renderer files and confirmed a successful GitHub Pages deployment; re-check parity after every source change.
+`codex/browser-github-pages` is the source/default branch. `gh-pages` is a deployment-artifact branch with separate history. Do not hand-edit or mechanically merge `gh-pages`; update source, verify it, then deploy the exact five renderer blobs deliberately.
 
-There are no pull requests. Issue #1 tracks the remaining authoritative shortcut-catalog audit. Cleanup already corrected several source-verified Figma bindings, while the source map records reviewed and still-pending catalogs. Project state, roadmap, audit notes, and historical decisions are maintained in the KEYS project documentation in Notion.
+There are no pull requests. The active technical trackers are:
+
+- Issue #1 — complete the authoritative row-by-row shortcut catalog audit;
+- Issue #2 — add a correct ordered model for sequential shortcut chords.
+
+Confirmed bad shortcut data found during cleanup was corrected for Figma, VS Code, Windows Terminal, Notion, ComfyUI, and PowerToys and protected by regression tests. Two VS Code sequential chord commands are deliberately excluded until Issue #2 is implemented rather than teaching an impossible simultaneous keypress.
 
 ## Maintenance rules
 
-Read `AGENTS.md` before changing the repository. Repository-local workflows live under `.agents/skills/`. Keep the browser architecture dependency-free unless a task explicitly justifies a migration or new dependency. Read `docs/shortcut-sources.md` before shortcut-content changes and verify edits against current authoritative documentation rather than guessing from memory.
+Read `AGENTS.md` before changing the repository and use the matching workflow under `.agents/skills/`. Keep the browser architecture dependency-free unless a concrete requirement justifies otherwise. Read `docs/shortcut-sources.md` before shortcut-content changes, and verify edits against current first-party documentation rather than memory.
+
+See `docs/README.md` for the project documentation index.
