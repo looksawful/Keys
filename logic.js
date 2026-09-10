@@ -216,6 +216,13 @@
     return expectedSet.every((key, index) => key === inputSet[index]);
   }
 
+  function shortcutSteps(shortcut) {
+    if (shortcut && Array.isArray(shortcut.steps) && shortcut.steps.length) {
+      return shortcut.steps.map((step) => step.slice());
+    }
+    return [shortcut && Array.isArray(shortcut.k) ? shortcut.k.slice() : []];
+  }
+
   function shuffle(list, rng = Math.random) {
     const result = list.slice();
     for (let i = result.length - 1; i > 0; i -= 1) {
@@ -228,6 +235,7 @@
   return {
     normalizeKey,
     compareKeySets,
+    shortcutSteps,
     shuffle,
   };
 });

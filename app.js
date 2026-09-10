@@ -77,12 +77,17 @@
   let view = 'home', sel = ids[0], cat = cfg.cat || 'all', cnt = Number.isFinite(cfg.cnt) ? cfg.cnt : 10;
   let mode = cfg.mode === 'choice' ? 'choice' : 'input';
   let timerOn = cfg.timerOn !== false, timerSec = Number(cfg.timerSec) || 60;
-  let qz = null, down = new Set(), reset = false, tick = null, flash = '', lastEsc = 0;
+  let qz = null, down = new Set(), reset = false, tick = null, chordTick = null, flash = '', lastEsc = 0;
 
   const meta = (id = sel) => brand[id] || { c: progs[id]?.color || '#fff', icon: '' };
   const icon = (id = sel) => `<span class="logo" style="--c:${meta(id).c}">${meta(id).icon}</span>`;
   const combo = (a) => a.map((k) => `<span class="key ${keyCls(k)}">${esc(k)}</span>`).join('');
   const keyCls = (k) => /^ctrl$/i.test(k) ? 'mod ctrl' : /^shift$/i.test(k) ? 'mod shift' : /^alt$/i.test(k) ? 'mod alt' : /^win$/i.test(k) ? 'mod win' : /^[a-zа-я0-9]$/i.test(k) ? `letter k${String(k).toLowerCase().charCodeAt(0) % 8}` : 'spec';
+  const modifierKeys = new Set(['Ctrl', 'Shift', 'Alt', 'Win']);
+  const shortcutSteps = (shortcut) => l.shortcutSteps(shortcut);
+  const chordHtml = (steps) => steps.map((step) => combo(step)).join('<span class="chord-sep" aria-hidden="true">→</span>');
+  const shortcutCombo = (shortcut) => chordHtml(shortcutSteps(shortcut));
+  const answerCombo = (steps) => chordHtml((steps || []).filter((step) => Array.isArray(step) && step.length));
   const catList = () => ['all', ...(cats[sel] || [])];
   const shown = (id = sel) => progs[id].sc.filter((x) => cat === 'all' || catOf(id, x) === cat);
   const counts = (max) => [5, 10, 15, max].filter((x, i, a) => x > 0 && x <= max && a.indexOf(x) === i);
@@ -108,7 +113,7 @@
   }
 
   function studyH() {
-    return `<section class="page">${top(false)}${titleH(progs[sel].name)}${catBtns()}<div class="list">${shown().map((s) => `<div class="item"><span>${esc(s.a)}</span><span class="keys">${combo(s.k)}</span></div>`).join('')}</div></section>`;
+    return `<section class="page">${top(false)}${titleH(progs[sel].name)}${catBtns()}<div class="list">${shown().map((s) => `<div class="item"><span>${esc(s.a)}</span><span class="keys">${shortcutCombo(s)}</span></div>`).join('')}</div></section>`;
   }
 
   function setupH() {
@@ -120,37 +125,61 @@
 
   function start() {
     const qs = shown();
-    qz = { qs: l.shuffle(qs).slice(0, clamp(cnt, qs.length)), i: 0, c: 0, k: [], left: timerSec, mistakes: [], ok: [], skipped: [], mode };
+    qz = { qs: l.shuffle(qs).slice(0, clamp(cnt, qs.length)), i: 0, c: 0, k: [], step: 0, entered: [], stepMatched: false, left: timerSec, mistakes: [], ok: [], skipped: [], mode };
     down = new Set(); reset = false; flash = ''; lastEsc = 0;
     clearInterval(tick);
+    clearTimeout(chordTick); chordTick = null;
     if (timerOn) tick = setInterval(() => { if (!qz) return; qz.left -= 1; if (qz.left <= 0) finish(); else render(); }, 1000);
     setView('quiz');
   }
 
   function finish() {
-    clearInterval(tick); tick = null; view = 'results'; render();
+    clearInterval(tick); tick = null;
+    clearTimeout(chordTick); chordTick = null;
+    view = 'results'; render();
   }
 
   function cur() { return qz?.qs[qz.i]; }
   function setView(v) { view = v; render(); }
-  function goNext(delay = 0) { setTimeout(() => { if (!qz) return; qz.i += 1; qz.k = []; down = new Set(); reset = false; flash = ''; if (qz.i >= qz.qs.length) finish(); else render(); }, delay); }
-  function pass(keys) { if (!qz || !cur()) return; qz.k = keys.slice(); qz.c += 1; qz.ok.push(cur()); flash = 'ok'; render(); goNext(650); }
-  function fail(keys, skip) { if (!qz || !cur()) return; qz.mistakes.push({ q: cur(), got: keys.slice(), skip: !!skip }); qz.skipped.push(cur()); if (skip) goNext(0); else { flash = 'bad'; render(); goNext(250); } }
-  function check(keys) { l.compareKeySets(keys, cur().k) ? pass(keys) : fail(keys, false); }
+  function goNext(delay = 0) { setTimeout(() => { if (!qz) return; qz.i += 1; qz.k = []; qz.step = 0; qz.entered = []; qz.stepMatched = false; down = new Set(); reset = false; flash = ''; clearTimeout(chordTick); chordTick = null; if (qz.i >= qz.qs.length) finish(); else render(); }, delay); }
+  function pass() { if (!qz || !cur()) return; clearTimeout(chordTick); chordTick = null; qz.c += 1; qz.ok.push(cur()); flash = 'ok'; render(); goNext(650); }
+  function fail(steps, skip) { if (!qz || !cur()) return; clearTimeout(chordTick); chordTick = null; qz.mistakes.push({ q: cur(), got: (steps || []).map((step) => step.slice()), skip: !!skip }); qz.skipped.push(cur()); if (skip) goNext(0); else { flash = 'bad'; render(); goNext(250); } }
+  function currentSteps() { return cur() ? shortcutSteps(cur()) : []; }
+  function checkChoice(id) { const selected = progs[sel].sc.find((s) => String(s.id) === String(id)); if (!selected || !cur()) return; selected.id === cur().id ? pass() : fail(shortcutSteps(selected), false); }
+  function advanceChord() {
+    if (!qz || !cur()) return;
+    const steps = currentSteps();
+    const matched = steps[qz.step];
+    if (!matched || qz.step >= steps.length - 1) return;
+    qz.entered.push(matched.slice());
+    qz.step += 1;
+    qz.k = Array.from(down);
+    qz.stepMatched = false;
+    clearTimeout(chordTick);
+    chordTick = setTimeout(() => {
+      if (view !== 'quiz' || !qz) return;
+      qz.step = 0; qz.entered = []; qz.stepMatched = false; qz.k = Array.from(down);
+      render();
+    }, 2000);
+    render();
+  }
 
   function choices(c) {
-    return l.shuffle([c, ...l.shuffle(progs[sel].sc.filter((s) => s.id !== c.id)).slice(0, 3)]).map((s) => `<button class="choice" data-choice="${esc(s.k.join(' + '))}">${combo(s.k)}</button>`).join('');
+    return l.shuffle([c, ...l.shuffle(progs[sel].sc.filter((s) => s.id !== c.id)).slice(0, 3)]).map((s) => `<button class="choice" data-choice-id="${s.id}">${shortcutCombo(s)}</button>`).join('');
   }
 
   function quizH() {
     const c = cur();
     if (!qz || !c) return resultsH();
-    return `<section class="page narrow"><div class="quizTop"><button class="back" data-quit aria-label="Завершить">←</button><span>${qz.i + 1}/${qz.qs.length}</span>${timerOn ? `<b>${fmt(qz.left)}</b>` : '<b></b>'}</div><div class="quiz ${flash}" style="--c:${meta().c}"><p>Удерживайте нужные клавиши</p><h1>${esc(c.a)}</h1>${qz.mode === 'choice' ? `<div class="choices">${choices(c)}</div>` : `<div class="inputKeys">${qz.k.length ? combo(qz.k) : '<span>Ожидание ввода</span>'}</div>`}<button class="skip" data-skip aria-label="Пропустить">×</button></div></section>`;
+    const steps = currentSteps();
+    const entered = [...qz.entered, ...(qz.k.length ? [qz.k] : [])];
+    const prompt = steps.length > 1 ? `Шаг ${Math.min(qz.step + 1, steps.length)} из ${steps.length}` : 'Удерживайте нужные клавиши';
+    return `<section class="page narrow"><div class="quizTop"><button class="back" data-quit aria-label="Завершить">←</button><span>${qz.i + 1}/${qz.qs.length}</span>${timerOn ? `<b>${fmt(qz.left)}</b>` : '<b></b>'}</div><div class="quiz ${flash}" style="--c:${meta().c}"><p>${prompt}</p><h1>${esc(c.a)}</h1>${qz.mode === 'choice' ? `<div class="choices">${choices(c)}</div>` : `<div class="inputKeys">${entered.length ? answerCombo(entered) : '<span>Ожидание ввода</span>'}</div>`}<button class="skip" data-skip aria-label="Пропустить">×</button></div></section>`;
   }
 
   function resultsH() {
     const total = qz?.qs.length || 0, good = qz?.c || 0, bad = qz?.mistakes.length || 0, pct = total ? Math.round((good / total) * 100) : 0;
-    return `<section class="page narrow"><div class="result"><h1>${pct}%</h1><p>${good} правильных ответов из ${total}</p><div class="stats"><span>Верно <b>${good}</b></span><span>Ошибки <b>${bad}</b></span><span>Категория <b>${cat === 'all' ? 'Все' : esc(cat)}</b></span></div></div>${bad ? `<div class="mistakes"><h2>Ошибки</h2>${qz.mistakes.map((m) => `<div class="mistake"><span>${esc(m.q.a)}</span><span>${m.skip ? 'Пропущено' : combo(m.got)}</span><b>${combo(m.q.k)}</b></div>`).join('')}</div>` : ''}<div class="actions"><button class="btn primary" data-restart>↻ Повторить</button><button class="btn" data-go="home">⌂ К программам</button></div></section>`;
+    return `<section class="page narrow"><div class="result"><h1>${pct}%</h1><p>${good} правильных ответов из ${total}</p><div class="stats"><span>Верно <b>${good}</b></span><span>Ошибки <b>${bad}</b></span><span>Категория <b>${cat === 'all' ? 'Все' : esc(cat)}</b></span></div></div>${bad ? `<div class="mistakes"><h2>Ошибки</h2>${qz.mistakes.map((m) => `<div class="mistake"><span>${esc(m.q.a)}</span><span>${m.skip ? 'Пропущено' : answerCombo(m.got)}</span><b>${shortcutCombo(m.q)}</b></div>`).join('')}</div>` : ''}<div class="actions"><button class="btn primary" data-restart>↻ Повторить</button><button class="btn" data-go="home">⌂ К программам</button></div></section>`;
   }
 
   function render() {
@@ -176,7 +205,7 @@
     if (t.hasAttribute('data-skip')) fail([], true);
     if (t.hasAttribute('data-quit') && confirm('Вы уверены, что хотите завершить тренировку?')) finish();
     if (t.hasAttribute('data-restart')) start();
-    if (t.dataset.choice) check(t.dataset.choice.split(' + '));
+    if (t.dataset.choiceId) checkChoice(t.dataset.choiceId);
   });
 
   document.addEventListener('input', (e) => {
@@ -189,21 +218,31 @@
     if (view !== 'quiz' || !qz || qz.mode === 'choice' || flash) return;
     const k = l.normalizeKey(e.key, e.code); if (!k) return;
     e.preventDefault();
+    if (e.repeat) return;
     if (k === 'Esc') {
       const now = Date.now();
-      if (now - lastEsc < 1200 && confirm('Вы уверены, что хотите завершить тренировку?')) finish();
+      if (now - lastEsc < 1200 && confirm('Вы уверены, что хотите завершить тренировку?')) { finish(); return; }
       lastEsc = now;
     }
     if (reset) { qz.k = []; down = new Set(); reset = false; }
-    down.add(k); qz.k = Array.from(down); render();
-    if (cur() && l.compareKeySets(qz.k, cur().k)) pass(qz.k);
+    down.add(k); qz.k = Array.from(down);
+    const steps = currentSteps();
+    const expected = steps[qz.step] || steps[0];
+    if (expected && l.compareKeySets(qz.k, expected)) {
+      if (qz.step >= steps.length - 1) { pass(); return; }
+      qz.stepMatched = true;
+    }
+    render();
   });
 
   document.addEventListener('keyup', (e) => {
     if (view !== 'quiz' || !qz || qz.mode === 'choice' || flash) return;
     const k = l.normalizeKey(e.key, e.code);
     down.delete(k);
-    if (!down.size && qz.k.length) reset = true;
+    qz.k = Array.from(down);
+    if (qz.stepMatched && qz.k.every((key) => modifierKeys.has(key))) { advanceChord(); return; }
+    if (!down.size && qz.step === 0) reset = true;
+    render();
   });
 
   render();
