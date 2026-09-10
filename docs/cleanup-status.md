@@ -2,27 +2,31 @@
 
 Snapshot date: 2026-09-10.
 
-The active browser runtime has been reduced to its current contracts, documented, covered by permanent Node tests, and checked in GitHub Actions.
+The active browser runtime has been reduced to its current contracts, documented, covered by permanent Node tests, checked in GitHub Actions, synchronized to GitHub Pages, and smoke-checked at the load/render level in a real Opera browser.
 
 ## Completed
 
-- current architecture documented;
+- current browser architecture documented;
 - repository-local agent instructions and KEYS-specific skills added;
 - stale Electron-era assumptions retired from current docs;
 - browser server path handling hardened;
 - fatal reset updated for the active localStorage key;
 - unused historical logic helpers removed;
-- CI added and updated to current action majors;
-- shortcut provenance work started and tracked in Issue #1;
-- verified Figma shortcut corrections protected by regression tests;
-- deployment contract documented;
-- browser load/render smoke checklist documented.
+- CI added and updated to current GitHub Action majors;
+- deployment and verification evidence levels documented;
+- shortcut provenance map and audit policy added;
+- source-verified corrections applied for Figma, VS Code, Windows Terminal, Notion, ComfyUI, and PowerToys;
+- corrected high-risk bindings protected by regression tests;
+- unsupported VS Code sequential chord rows removed from the active flat-key catalog instead of being trained incorrectly;
+- sequential chord support tracked explicitly in Issue #2;
+- public GitHub Pages load/render smoke confirmed with the expected ten program cards and no fatal screen.
 
-## Remaining by design
+## Explicit remaining work
 
-- full authoritative shortcut audit across every catalog entry;
-- full interactive browser smoke with click/keypress/focus automation;
-- any product expansion such as persistent progress, spaced repetition, recommendations, or desktop packaging;
-- repository-governance changes that require administration capabilities, such as renaming the default branch or enabling branch protection.
+- Issue #1: complete the authoritative row-by-row shortcut audit for every active catalog entry;
+- Issue #2: implement ordered sequential shortcut chords and restore verified chord commands;
+- full interactive browser smoke with click/keypress/focus automation, which the currently connected browser interface cannot execute;
+- optional product expansion such as persistent progress, spaced repetition, recommendations, or desktop packaging;
+- repository-governance changes requiring administration capability, such as changing the historical default branch name or enabling branch protection.
 
-These are explicit next-stage tasks, not hidden cleanup debt.
+These are tracked next-stage tasks, not hidden cleanup debt. Do not claim the shortcut catalog is fully authoritative or the interactive browser flow fully tested until the corresponding work is actually completed.
