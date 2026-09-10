@@ -10,6 +10,7 @@ KEYS is a dependency-free browser trainer for learning keyboard shortcuts. The c
 - `src/renderer/index.html` / `styles.css` — static shell and presentation.
 - `scripts/browser-build.cjs` — deterministic copy build into `dist/browser`.
 - `scripts/browser-server.cjs` — local development server bound to loopback by default.
+- `docs/shortcut-sources.md` — first-party source map and shortcut-data audit status.
 
 The browser version currently persists quiz configuration only. Learning history, editor functionality, persistent progress, and recommendations from older revisions are not part of the active runtime.
 
@@ -28,8 +29,8 @@ npm start
 
 `codex/browser-github-pages` is the source/default branch. `gh-pages` is a deployment-artifact branch with separate history. Do not hand-edit or mechanically merge `gh-pages`; update source, verify it, then deploy deliberately. The 2026-09-10 cleanup established byte-for-byte parity for the five renderer files and confirmed a successful GitHub Pages deployment; re-check parity after every source change.
 
-There are no pull requests. Issue #1 tracks the remaining authoritative shortcut-catalog audit after cleanup found a confirmed Figma shortcut mismatch. Project state, roadmap, audit notes, and historical decisions are maintained in the KEYS project documentation in Notion.
+There are no pull requests. Issue #1 tracks the remaining authoritative shortcut-catalog audit. Cleanup already corrected several source-verified Figma bindings, while the source map records reviewed and still-pending catalogs. Project state, roadmap, audit notes, and historical decisions are maintained in the KEYS project documentation in Notion.
 
 ## Maintenance rules
 
-Read `AGENTS.md` before changing the repository. Repository-local workflows live under `.agents/skills/`. Keep the browser architecture dependency-free unless a task explicitly justifies a migration or new dependency, and verify shortcut-content changes against authoritative documentation rather than guessing from memory.
+Read `AGENTS.md` before changing the repository. Repository-local workflows live under `.agents/skills/`. Keep the browser architecture dependency-free unless a task explicitly justifies a migration or new dependency. Read `docs/shortcut-sources.md` before shortcut-content changes and verify edits against current authoritative documentation rather than guessing from memory.
