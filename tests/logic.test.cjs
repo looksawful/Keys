@@ -24,3 +24,14 @@ test('shuffle returns a deterministic copy when an rng is supplied', () => {
   assert.deepEqual(source, ['A', 'B', 'C', 'D']);
   assert.notEqual(result, source);
 });
+
+test('shortcutSteps keeps flat shortcuts backward-compatible and clones ordered chords', () => {
+  const flat = { k: ['Ctrl', 'P'] };
+  const chord = { k: ['Ctrl', 'K'], steps: [['Ctrl', 'K'], ['Ctrl', 'W']] };
+  const flatSteps = hkLogic.shortcutSteps(flat);
+  const chordSteps = hkLogic.shortcutSteps(chord);
+  assert.deepEqual(flatSteps, [['Ctrl', 'P']]);
+  assert.deepEqual(chordSteps, [['Ctrl', 'K'], ['Ctrl', 'W']]);
+  chordSteps[0][0] = 'Alt';
+  assert.equal(chord.steps[0][0], 'Ctrl');
+});

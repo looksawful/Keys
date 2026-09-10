@@ -19,11 +19,11 @@ test('verified Figma shortcut corrections stay aligned with current first-party 
   assert.deepEqual(shortcut('figma', 71).k, ['Alt', 'Shift', 'F']);
 });
 
-test('verified VS Code Windows defaults stay aligned and unsupported chords stay excluded', () => {
+test('verified VS Code Windows defaults and ordered chords stay aligned', () => {
   assert.deepEqual(shortcut('vscode', 4).k, ['Alt', 'F4']);
   assert.deepEqual(shortcut('vscode', 10).k, ['Ctrl', 'F4']);
-  assert.equal(maybeShortcut('vscode', 11), undefined);
-  assert.equal(maybeShortcut('vscode', 42), undefined);
+  assert.deepEqual(shortcut('vscode', 11).steps, [['Ctrl', 'K'], ['Ctrl', 'W']]);
+  assert.deepEqual(shortcut('vscode', 42).steps, [['Ctrl', 'K'], ['Ctrl', 'F']]);
 });
 
 test('verified Windows Terminal pane bindings stay aligned with current defaults', () => {

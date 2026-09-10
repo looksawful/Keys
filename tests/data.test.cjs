@@ -29,6 +29,17 @@ test('shortcut catalog has a valid stable shape', () => {
         assert.equal(typeof key, 'string');
         assert.ok(key.trim(), `${programId}/${shortcut.id}: empty key token`);
       }
+      if (shortcut.steps !== undefined) {
+        assert.ok(Array.isArray(shortcut.steps) && shortcut.steps.length > 1, `${programId}/${shortcut.id}: invalid chord steps`);
+        assert.deepEqual(shortcut.steps[0], shortcut.k, `${programId}/${shortcut.id}: k must match first chord step`);
+        for (const step of shortcut.steps) {
+          assert.ok(Array.isArray(step) && step.length > 0, `${programId}/${shortcut.id}: empty chord step`);
+          for (const key of step) {
+            assert.equal(typeof key, 'string');
+            assert.ok(key.trim(), `${programId}/${shortcut.id}: empty chord key token`);
+          }
+        }
+      }
       assert.ok(difficulties.has(shortcut.d), `${programId}/${shortcut.id}: invalid difficulty ${shortcut.d}`);
     }
   }
