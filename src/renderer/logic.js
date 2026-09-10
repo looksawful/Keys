@@ -179,28 +179,6 @@
     return normalizeKeyName(rawKey);
   }
 
-  function parseKeyCombo(input) {
-    if (!input) return [];
-    const compact = String(input).replace(/\s+/g, '');
-    if (!compact) return [];
-    const parts = [];
-    let buf = '';
-    for (const ch of compact) {
-      if (ch === '+') {
-        if (buf) {
-          parts.push(buf);
-          buf = '';
-        } else {
-          parts.push('+');
-        }
-      } else {
-        buf += ch;
-      }
-    }
-    if (buf) parts.push(buf);
-    return parts.map((part) => normalizeKeyName(part)).filter(Boolean);
-  }
-
   function normalizeKeyList(keys) {
     return keys.map((key) => normalizeKeyName(key)).filter(Boolean);
   }
@@ -247,48 +225,9 @@
     return result;
   }
 
-  function filterShortcuts(shortcuts, difficulty) {
-    if (!difficulty || difficulty === 'all') return shortcuts.slice();
-    return shortcuts.filter((shortcut) => shortcut.d === difficulty);
-  }
-
-  function createQuizState(shortcuts, config, rng = Math.random) {
-    const filtered = filterShortcuts(shortcuts, config.difficulty);
-    const shuffled = shuffle(filtered, rng);
-    const count = Math.min(config.count, shuffled.length);
-    return {
-      qs: shuffled.slice(0, count),
-      i: 0,
-      k: [],
-      sh: false,
-      ok: false,
-      c: 0
-    };
-  }
-
-  function calcProgramProgress(history, programId, sampleSize = 5) {
-    const records = history.filter((entry) => entry.p === programId);
-    if (!records.length) return 0;
-    const recent = records.slice(-sampleSize);
-    const avg = recent.reduce((sum, entry) => sum + (entry.t ? entry.c / entry.t : 0), 0) / recent.length;
-    return Math.round(avg * 100);
-  }
-
-  function calcAverageScore(history) {
-    if (!history.length) return 0;
-    const avg = history.reduce((sum, entry) => sum + (entry.t ? entry.c / entry.t : 0), 0) / history.length;
-    return Math.round(avg * 100);
-  }
-
   return {
     normalizeKey,
-    normalizeKeySet,
-    parseKeyCombo,
     compareKeySets,
     shuffle,
-    filterShortcuts,
-    createQuizState,
-    calcProgramProgress,
-    calcAverageScore
   };
 });

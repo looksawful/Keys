@@ -5,7 +5,7 @@ KEYS is a dependency-free browser trainer for learning keyboard shortcuts. The c
 ## Current architecture
 
 - `src/renderer/data.js` — shortcut catalog and palette data.
-- `src/renderer/logic.js` — keyboard normalization, combo comparison, quiz helpers, and legacy stats helpers. It is UMD and can be required from Node tests.
+- `src/renderer/logic.js` — keyboard normalization, combo comparison, and shuffle. It is UMD and can be required from Node tests.
 - `src/renderer/app.js` — browser UI, category heuristics, quiz state, timer, and configuration persistence.
 - `src/renderer/index.html` / `styles.css` — static shell and presentation.
 - `scripts/browser-build.cjs` — deterministic copy build into `dist/browser`.
@@ -26,9 +26,9 @@ npm start
 
 ## Repository topology
 
-`codex/browser-github-pages` is the source/default branch. `gh-pages` is a deployment-artifact branch with separate history; at the 2026-09-10 cleanup snapshot its five files match `src/renderer` byte-for-byte. Do not hand-edit `gh-pages`; update source, verify it, then deploy deliberately.
+`codex/browser-github-pages` is the source/default branch. `gh-pages` is a deployment-artifact branch with separate history. Do not hand-edit or mechanically merge `gh-pages`; update source, verify it, then deploy deliberately. The 2026-09-10 cleanup established byte-for-byte parity for the five renderer files and confirmed a successful GitHub Pages deployment; re-check parity after every source change.
 
-There are no open or closed GitHub Issues and no pull requests at the cleanup snapshot. Project state, roadmap, audit notes, and historical decisions are maintained in the KEYS project documentation in Notion.
+There are no pull requests. Issue #1 tracks the remaining authoritative shortcut-catalog audit after cleanup found a confirmed Figma shortcut mismatch. Project state, roadmap, audit notes, and historical decisions are maintained in the KEYS project documentation in Notion.
 
 ## Maintenance rules
 
