@@ -1,5 +1,11 @@
 # Agent Instructions
 
+## Global reporting rule
+
+- EN: When reporting information to the user, be extremely concise. Sacrifice grammar if needed for brevity.
+- RU: При сообщении информации пользователю будь предельно краткой. Ради краткости можно жертвовать грамматикой.
+
+
 ## Start and routing
 
 - Inspect the real repository state before editing: current branch, exact HEAD, relevant files, open PRs/Issues, and the narrow diff you intend to change.
