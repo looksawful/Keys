@@ -43,3 +43,17 @@
 - Avoid destructive history operations and force updates as incidental repair steps.
 - Re-read branch and PR state before merge/deploy decisions.
 - Do not create PRs, merge, or deploy unless the current user request authorizes that action.
+
+## Agent skills
+
+### Issue tracker
+
+GitHub Issues are used for this repository. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Triage vocabulary is configured in `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context layout. See `docs/agents/domain.md`.
